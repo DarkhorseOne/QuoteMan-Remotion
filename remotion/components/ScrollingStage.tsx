@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import type { LayoutConfig } from '../types';
+import { PADDING_HORIZONTAL, PADDING_VERTICAL, COPYRIGHT_HEIGHT } from '../constants';
 
 type ScrollingStageProps = {
   layout: LayoutConfig;
@@ -13,7 +14,11 @@ export const ScrollingStage: React.FC<ScrollingStageProps> = ({ layout, children
 
   let translateY = 0;
 
-  if (layout.mode === 'scroll' && layout.scrollStartY !== undefined && layout.scrollEndY !== undefined) {
+  if (
+    layout.mode === 'scroll' &&
+    layout.scrollStartY !== undefined &&
+    layout.scrollEndY !== undefined
+  ) {
     translateY = interpolate(
       frame,
       [0, durationInFrames],
@@ -21,7 +26,7 @@ export const ScrollingStage: React.FC<ScrollingStageProps> = ({ layout, children
       {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
-      }
+      },
     );
   }
 
@@ -31,6 +36,11 @@ export const ScrollingStage: React.FC<ScrollingStageProps> = ({ layout, children
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+    boxSizing: 'border-box',
+    paddingLeft: PADDING_HORIZONTAL,
+    paddingRight: PADDING_HORIZONTAL,
+    paddingTop: layout.mode === 'static' ? PADDING_VERTICAL : 0,
+    paddingBottom: layout.mode === 'static' ? PADDING_VERTICAL + COPYRIGHT_HEIGHT : 0,
   };
 
   if (layout.mode === 'static') {
@@ -41,9 +51,7 @@ export const ScrollingStage: React.FC<ScrollingStageProps> = ({ layout, children
 
   return (
     <AbsoluteFill>
-      <div style={containerStyle}>
-        {children}
-      </div>
+      <div style={containerStyle}>{children}</div>
     </AbsoluteFill>
   );
 };

@@ -57,7 +57,7 @@ async function main() {
     }
 
     const voice = index % 2 === 0 ? 'en-GB-RyanNeural' : 'en-GB-LibbyNeural';
-    
+
     console.log(`[${quote.id}] Synthesizing with ${voice}...`);
 
     if (mockMode) {
@@ -74,11 +74,12 @@ async function synthesizeAzure(
   quote: QuoteNormalized,
   voice: string,
   audioPath: string,
-  timingPath: string
+  timingPath: string,
 ) {
   return new Promise<void>((resolve, reject) => {
     const speechConfig = sdk.SpeechConfig.fromSubscription(SPEECH_KEY!, SPEECH_REGION!);
-    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+    speechConfig.speechSynthesisOutputFormat =
+      sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
     speechConfig.speechSynthesisVoiceName = voice;
 
     const audioConfig = sdk.AudioConfig.fromAudioFileOutput(audioPath);
@@ -92,15 +93,15 @@ async function synthesizeAzure(
         textOffset: e.textOffset,
         wordLength: e.wordLength,
         audioOffsetTicks: e.audioOffset,
-        durationTicks: e.duration
+        durationTicks: e.duration,
       });
     };
-
+    const speechText = quote.author ? `${quote.text} . . . . ${quote.author}` : quote.text;
     const ssml = `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-GB">
         <voice name="${voice}">
-          <prosody rate="0%" pitch="0%">
-            ${escapeXml(quote.text)}
+          <prosody rate="-10%" pitch="-5%">
+            ${escapeXml(speechText)}
           </prosody>
         </voice>
       </speak>
@@ -108,9 +109,9 @@ async function synthesizeAzure(
 
     synthesizer.speakSsmlAsync(
       ssml,
-      result => {
+      (result) => {
         synthesizer.close();
-        
+
         if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
           fs.writeJSONSync(timingPath, boundaries, { spaces: 2 });
           resolve();
@@ -118,10 +119,10 @@ async function synthesizeAzure(
           reject(new Error(`TTS Failed: ${result.errorDetails}`));
         }
       },
-      err => {
+      (err) => {
         synthesizer.close();
         reject(err);
-      }
+      },
     );
   });
 }
@@ -129,45 +130,51 @@ async function synthesizeAzure(
 async function generateMockAssets(quote: QuoteNormalized, audioPath: string, timingPath: string) {
   try {
     // Fetch a valid minimal MP3 file
-    const res = await fetch("https://github.com/mathiasbynens/small/raw/master/mp3.mp3");
-    if (!res.ok) throw new Error("Failed to fetch sample MP3");
+    const res = await fetch('https://github.com/mathiasbynens/small/raw/master/mp3.mp3');
+    if (!res.ok) throw new Error('Failed to fetch sample MP3');
     const arrayBuffer = await res.arrayBuffer();
-    
+
     const frame = Buffer.from(arrayBuffer);
-    const buffer = Buffer.concat(Array(200).fill(frame)); 
-    
+    const buffer = Buffer.concat(Array(200).fill(frame));
+
     await fs.writeFile(audioPath, buffer);
   } catch (e) {
-    console.warn("Failed to fetch sample MP3, writing dummy buffer. Rendering WILL fail.", e);
+    console.warn('Failed to fetch sample MP3, writing dummy buffer. Rendering WILL fail.', e);
     await fs.writeFile(audioPath, Buffer.alloc(1000));
   }
-  
+
   const words = quote.text.split(' ');
   const boundaries: RawBoundary[] = words.map((word, i) => ({
     text: word,
     textOffset: 0,
     wordLength: word.length,
-    audioOffsetTicks: i * 5000000, 
-    durationTicks: 4000000 
+    audioOffsetTicks: i * 5000000,
+    durationTicks: 4000000,
   }));
 
   await fs.writeJSON(timingPath, boundaries, { spaces: 2 });
 }
 
 function escapeXml(unsafe: string): string {
-  return unsafe.replace(/[<>&'"]/g, c => {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
     switch (c) {
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '&': return '&amp;';
-      case '\'': return '&apos;';
-      case '"': return '&quot;';
-      default: return c;
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '&':
+        return '&amp;';
+      case "'":
+        return '&apos;';
+      case '"':
+        return '&quot;';
+      default:
+        return c;
     }
   });
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Fatal Error:', err);
   process.exit(1);
 });

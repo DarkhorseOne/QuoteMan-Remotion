@@ -26,6 +26,7 @@
   "dependencies": {
     "@remotion/bundler": "^4.0.409",
     "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.410",
     "@remotion/media-utils": "^4.0.0",
     "@remotion/renderer": "^4.0.0",
     "dotenv": "^16.0.0",
@@ -42,7 +43,10 @@
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.37.5",
     "prettier": "^3.0.0",
     "shx": "^0.3.4",
     "tsx": "^4.0.0",

@@ -11,7 +11,7 @@ const CONCURRENCY = 2;
 
 async function main() {
   await fs.ensureDir(OUT_DIR);
-  
+
   console.log('📦 Bundling Remotion project...');
   const bundled = await bundle({
     entryPoint: path.join(process.cwd(), 'remotion', 'index.ts'),
@@ -22,7 +22,21 @@ async function main() {
   await fs.copy(path.join(process.cwd(), 'public', 'assets'), path.join(bundled, 'assets'));
   console.log('✅ Copied assets to bundle');
 
-  const quotes = await fs.readJSON(QUOTES_PATH);
+  const args = process.argv.slice(2);
+  const idArgIndex = args.indexOf('--id');
+  const targetId = idArgIndex !== -1 ? args[idArgIndex + 1] : null;
+
+  let quotes = await fs.readJSON(QUOTES_PATH);
+
+  if (targetId) {
+    console.log(`🎯 Target ID specified: ${targetId}`);
+    quotes = quotes.filter((q: any) => q.id === targetId);
+    if (quotes.length === 0) {
+      console.error(`❌ Quote with ID ${targetId} not found.`);
+      process.exit(1);
+    }
+  }
+
   console.log(`🎥 Starting batch render for ${quotes.length} quotes...`);
 
   const limit = pLimit(CONCURRENCY);
@@ -30,14 +44,14 @@ async function main() {
   const tasks = quotes.map((quote: any) => {
     return limit(async () => {
       const outFile = path.join(OUT_DIR, `${quote.id}.mp4`);
-      
+
       if (fs.existsSync(outFile)) {
         console.log(`[${quote.id}] Skipped (Exists)`);
         return;
       }
 
       console.log(`[${quote.id}] Rendering...`);
-      
+
       try {
         const composition = await selectComposition({
           serveUrl: bundled,
@@ -64,7 +78,7 @@ async function main() {
   console.log('🎉 Batch render complete!');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
