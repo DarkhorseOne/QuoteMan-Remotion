@@ -9,6 +9,7 @@ db.pragma('journal_mode = WAL');
 export type Quote = {
   id: string;
   text: string;
+  text_zh?: string | null;
   author: string | null;
   tag: string | null;
   voice_gender: string | null;

@@ -39,6 +39,7 @@ import {
   MessageCircle, // For WeChat
   Instagram, // For XiaoHongShu (closest icon)
   Copy,
+  Languages,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -173,6 +174,14 @@ export function QuoteTable({
                   >
                     {quote.id.substring(0, 8)}
                   </span>
+                  {quote.text_zh && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 text-[9px] px-1 py-0 h-4 bg-orange-50 text-orange-600 border-orange-200"
+                    >
+                      CN
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
@@ -570,6 +579,46 @@ function QuoteDetailDialog({
             <div className="p-3 bg-gray-50 rounded-md text-lg font-medium leading-relaxed">
               {quote.text}
             </div>
+
+            {quote.text_zh && (
+              <div className="mt-4 space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-gray-500 uppercase tracking-wider">
+                    Chinese Translation
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => {
+                        const fullText = `${quote.text}\n${quote.text_zh}`;
+                        navigator.clipboard.writeText(fullText);
+                        toast.success('English and Chinese copied to clipboard');
+                      }}
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => {
+                        navigator.clipboard.writeText(quote.text_zh);
+                        toast.success('Chinese text copied to clipboard');
+                      }}
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy CN
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 bg-orange-50/50 border border-orange-100 rounded-md text-lg font-medium leading-relaxed text-gray-800">
+                  {quote.text_zh}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

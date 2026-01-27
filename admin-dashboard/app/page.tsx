@@ -3,7 +3,17 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { Loader2, FileAudio, Video, Cloud, Calendar, X, Send, RotateCcw } from 'lucide-react';
+import {
+  Loader2,
+  FileAudio,
+  Video,
+  Cloud,
+  Calendar,
+  X,
+  Send,
+  RotateCcw,
+  Languages,
+} from 'lucide-react';
 import { QuoteTable } from '@/components/QuoteTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -186,6 +196,20 @@ export default function Dashboard() {
                 <FileAudio className="w-3 h-3 mr-2" />
               )}
               TTS
+            </Button>
+            <Button
+              onClick={() => runAction('translate')}
+              disabled={selected.length === 0 || processing}
+              variant="default"
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              {processing && selected.length > 0 ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-2" />
+              ) : (
+                <Languages className="w-3 h-3 mr-2" />
+              )}
+              Translate
             </Button>
             <Button
               onClick={() => runAction('postprocess')}
