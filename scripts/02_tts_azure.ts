@@ -3,13 +3,12 @@ import fs from 'fs-extra';
 import path from 'path';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 
-import { execSync } from 'child_process';
-
 // Types
 type QuoteNormalized = {
   id: string;
   text: string;
   author?: string;
+  voice_gender?: string;
   raw: string;
 };
 
@@ -56,7 +55,12 @@ async function main() {
       continue;
     }
 
-    const voice = index % 2 === 0 ? 'en-GB-RyanNeural' : 'en-GB-LibbyNeural';
+    let voice = index % 2 === 0 ? 'en-GB-RyanNeural' : 'en-GB-LibbyNeural';
+    if (quote.voice_gender === 'male') {
+      voice = 'en-GB-RyanNeural';
+    } else if (quote.voice_gender === 'female') {
+      voice = 'en-GB-LibbyNeural';
+    }
 
     console.log(`[${quote.id}] Synthesizing with ${voice}...`);
 

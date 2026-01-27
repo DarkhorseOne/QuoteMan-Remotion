@@ -31,5 +31,5 @@ export const AUTHOR_FONT_SIZE = 72;
 export const AUTHOR_COLOR = '#888888';
 export const AUTHOR_MARGIN_TOP = 100;
 
-export const COPYRIGHT_TEXT = 'Made With ❤️  © 2026 DARKHORSEONE LIMITED';
+export const COPYRIGHT_TEXT = 'Made With ❤️  DHO.AI';
 export const COPYRIGHT_HEIGHT = 80;

@@ -1,0 +1,88 @@
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '50');
+  const tag = searchParams.get('tag');
+  const status = searchParams.get('status');
+  const search = searchParams.get('search');
+  const platform = searchParams.get('platform');
+
+  const offset = (page - 1) * limit;
+
+  let whereClause = 'WHERE 1=1';
+  const params: any[] = [];
+
+  if (tag) {
+    whereClause += ' AND tag = ?';
+    params.push(tag);
+  }
+
+  if (search) {
+    whereClause += ' AND (text LIKE ? OR author LIKE ?)';
+    params.push(`%${search}%`);
+    params.push(`%${search}%`);
+  }
+
+  if (status) {
+    if (['scheduled', 'posted', 'failed'].includes(status)) {
+      whereClause += ` AND EXISTS (SELECT 1 FROM publishing p WHERE p.quote_id = quotes.id AND p.posted_status = ?)`;
+      params.push(status);
+    } else {
+      whereClause += ' AND status = ?';
+      params.push(status);
+    }
+  }
+
+  if (platform) {
+    whereClause += ` AND EXISTS (SELECT 1 FROM publishing p WHERE p.quote_id = quotes.id AND p.platform = ?)`;
+    params.push(platform);
+  }
+
+  const query = `SELECT * FROM quotes ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+  const countQuery = `SELECT COUNT(*) as total FROM quotes ${whereClause}`;
+
+  const stmt = db.prepare(query);
+  const countStmt = db.prepare(countQuery);
+
+  const quotes = stmt.all(...params, limit, offset) as any[];
+  const totalResult = countStmt.get(...params) as { total: number };
+
+  if (quotes.length === 0) {
+    return NextResponse.json({
+      data: [],
+      meta: {
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      },
+    });
+  }
+
+  const quoteIds = quotes.map((q) => q.id);
+  const placeholders = quoteIds.map(() => '?').join(',');
+
+  const pubStmt = db.prepare(`SELECT * FROM publishing WHERE quote_id IN (${placeholders})`);
+  const publishingRecords = pubStmt.all(...quoteIds) as any[];
+
+  const quotesWithPub = quotes.map((q: any) => {
+    const pubs = publishingRecords.filter((p: any) => p.quote_id === q.id);
+    return {
+      ...q,
+      publishing: pubs,
+    };
+  });
+
+  return NextResponse.json({
+    data: quotesWithPub,
+    meta: {
+      total: totalResult.total,
+      page,
+      limit,
+      totalPages: Math.ceil(totalResult.total / limit),
+    },
+  });
+}
