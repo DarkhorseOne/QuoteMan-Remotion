@@ -13,6 +13,7 @@ import {
   Send,
   RotateCcw,
   Languages,
+  Hash,
 } from 'lucide-react';
 import { QuoteTable } from '@/components/QuoteTable';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,8 @@ export default function Dashboard() {
   const [tag, setTag] = useState('all');
   const [status, setStatus] = useState('all');
   const [platform, setPlatform] = useState('all');
+  const [translated, setTranslated] = useState('all');
+  const [hasTopics, setHasTopics] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -48,6 +51,8 @@ export default function Dashboard() {
   if (tag && tag !== 'all') params.append('tag', tag);
   if (status && status !== 'all') params.append('status', status);
   if (platform && platform !== 'all') params.append('platform', platform);
+  if (translated && translated !== 'all') params.append('translated', translated);
+  if (hasTopics && hasTopics !== 'all') params.append('has_topics', hasTopics);
 
   const { data: quotesData, mutate } = useSWR(`/api/quotes?${params.toString()}`, fetcher);
   const { data: tagsData } = useSWR('/api/tags', fetcher);
@@ -168,6 +173,28 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
 
+          <Select value={translated} onValueChange={setTranslated}>
+            <SelectTrigger className="w-[120px] h-9">
+              <SelectValue placeholder="Translation" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any Trans</SelectItem>
+              <SelectItem value="yes">Translated</SelectItem>
+              <SelectItem value="no">Not Trans</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={hasTopics} onValueChange={setHasTopics}>
+            <SelectTrigger className="w-[120px] h-9">
+              <SelectValue placeholder="Topics" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any Topics</SelectItem>
+              <SelectItem value="yes">Has Topics</SelectItem>
+              <SelectItem value="no">No Topics</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={platform} onValueChange={setPlatform}>
             <SelectTrigger className="w-[150px] h-9">
               <SelectValue placeholder="Platform" />
@@ -210,6 +237,20 @@ export default function Dashboard() {
                 <Languages className="w-3 h-3 mr-2" />
               )}
               Translate
+            </Button>
+            <Button
+              onClick={() => runAction('generate-topics')}
+              disabled={selected.length === 0 || processing}
+              variant="default"
+              size="sm"
+              className="bg-pink-500 hover:bg-pink-600"
+            >
+              {processing && selected.length > 0 ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-2" />
+              ) : (
+                <Hash className="w-3 h-3 mr-2" />
+              )}
+              Topics
             </Button>
             <Button
               onClick={() => runAction('postprocess')}

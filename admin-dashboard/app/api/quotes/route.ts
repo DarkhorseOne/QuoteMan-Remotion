@@ -9,6 +9,8 @@ export async function GET(request: Request) {
   const status = searchParams.get('status');
   const search = searchParams.get('search');
   const platform = searchParams.get('platform');
+  const translated = searchParams.get('translated');
+  const hasTopics = searchParams.get('has_topics');
 
   const offset = (page - 1) * limit;
 
@@ -34,6 +36,18 @@ export async function GET(request: Request) {
       whereClause += ' AND status = ?';
       params.push(status);
     }
+  }
+
+  if (translated === 'yes') {
+    whereClause += " AND text_zh IS NOT NULL AND text_zh <> ''";
+  } else if (translated === 'no') {
+    whereClause += " AND (text_zh IS NULL OR text_zh = '')";
+  }
+
+  if (hasTopics === 'yes') {
+    whereClause += ' AND (topics_en IS NOT NULL OR topics_zh IS NOT NULL)';
+  } else if (hasTopics === 'no') {
+    whereClause += ' AND (topics_en IS NULL AND topics_zh IS NULL)';
   }
 
   if (platform) {

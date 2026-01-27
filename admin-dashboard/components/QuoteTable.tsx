@@ -40,6 +40,7 @@ import {
   Instagram, // For XiaoHongShu (closest icon)
   Copy,
   Languages,
+  Hash,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -180,6 +181,14 @@ export function QuoteTable({
                       className="ml-2 text-[9px] px-1 py-0 h-4 bg-orange-50 text-orange-600 border-orange-200"
                     >
                       CN
+                    </Badge>
+                  )}
+                  {(quote.topics_en || quote.topics_zh) && (
+                    <Badge
+                      variant="outline"
+                      className="ml-1 text-[9px] px-1 py-0 h-4 bg-pink-50 text-pink-600 border-pink-200"
+                    >
+                      #
                     </Badge>
                   )}
                 </TableCell>
@@ -592,9 +601,9 @@ function QuoteDetailDialog({
                       size="sm"
                       className="h-6 px-2 text-xs"
                       onClick={() => {
-                        const fullText = `${quote.text}\n${quote.text_zh}`;
-                        navigator.clipboard.writeText(fullText);
-                        toast.success('English and Chinese copied to clipboard');
+                        const fullText = `${quote.text}\n${quote.text_zh}\n${quote.topics_zh || ''}`;
+                        navigator.clipboard.writeText(fullText.trim());
+                        toast.success('English + Chinese + Topics copied');
                       }}
                     >
                       <Copy className="w-3 h-3 mr-1" />
@@ -617,6 +626,72 @@ function QuoteDetailDialog({
                 <div className="p-3 bg-orange-50/50 border border-orange-100 rounded-md text-lg font-medium leading-relaxed text-gray-800">
                   {quote.text_zh}
                 </div>
+              </div>
+            )}
+
+            {(quote.topics_en || quote.topics_zh) && (
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                {quote.topics_en && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-gray-500 uppercase tracking-wider">
+                        English Topics
+                      </Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          const fullText = `${quote.text}\n${quote.topics_en}`;
+                          navigator.clipboard.writeText(fullText);
+                          toast.success('English quote + topics copied');
+                        }}
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy All
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(quote.topics_en);
+                          toast.success('English topics copied');
+                        }}
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
+                    <div className="p-2 bg-pink-50/50 border border-pink-100 rounded text-sm text-pink-700 font-mono break-words">
+                      {quote.topics_en}
+                    </div>
+                  </div>
+                )}
+                {quote.topics_zh && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-gray-500 uppercase tracking-wider">
+                        Chinese Topics
+                      </Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(quote.topics_zh);
+                          toast.success('Chinese topics copied');
+                        }}
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
+                    <div className="p-2 bg-pink-50/50 border border-pink-100 rounded text-sm text-pink-700 font-mono break-words">
+                      {quote.topics_zh}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

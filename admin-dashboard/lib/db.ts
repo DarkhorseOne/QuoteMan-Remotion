@@ -10,6 +10,8 @@ export type Quote = {
   id: string;
   text: string;
   text_zh?: string | null;
+  topics_en?: string | null;
+  topics_zh?: string | null;
   author: string | null;
   tag: string | null;
   voice_gender: string | null;
