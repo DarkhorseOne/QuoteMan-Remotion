@@ -1,17 +1,18 @@
-import { AbsoluteFill, Audio, staticFile, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, staticFile } from 'remotion';
 import { WordFlow } from '../components/WordFlow';
 import { ScrollingStage } from '../components/ScrollingStage';
 import { Copyright } from '../components/Copyright';
-import { BG_COLOR, PADDING_HORIZONTAL, PADDING_VERTICAL, LEAD_IN_FRAMES } from '../constants';
+import { BG_COLOR } from '../constants';
 import { WordTiming, LayoutConfig } from '../types';
 import React, { useEffect, useState } from 'react';
 
 // Props passed to the component
 type QuoteVideoProps = {
   id: string;
+  tag: string;
 };
 
-export const QuoteVideo: React.FC<QuoteVideoProps> = ({ id }) => {
+export const QuoteVideo: React.FC<QuoteVideoProps> = ({ id, tag }) => {
   const [timings, setTimings] = useState<WordTiming[] | null>(null);
   const [layout, setLayout] = useState<LayoutConfig | null>(null);
   const [handle] = useState(() => {
@@ -24,11 +25,11 @@ export const QuoteVideo: React.FC<QuoteVideoProps> = ({ id }) => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const timingRes = await fetch(staticFile(`assets/timing/${id}.json`));
+        const timingRes = await fetch(staticFile(`assets/timing/${tag}/${id}.json`));
         if (!timingRes.ok) throw new Error(`Timing 404: ${timingRes.statusText}`);
         const timingData = await timingRes.json();
 
-        const layoutRes = await fetch(staticFile(`assets/layout/${id}.json`));
+        const layoutRes = await fetch(staticFile(`assets/layout/${tag}/${id}.json`));
         if (!layoutRes.ok) throw new Error(`Layout 404: ${layoutRes.statusText}`);
         const layoutData = await layoutRes.json();
 
@@ -47,7 +48,7 @@ export const QuoteVideo: React.FC<QuoteVideoProps> = ({ id }) => {
     };
 
     loadData();
-  }, [id, handle]);
+  }, [id, tag, handle]);
 
   if (!timings || !layout) {
     return null;
@@ -55,7 +56,7 @@ export const QuoteVideo: React.FC<QuoteVideoProps> = ({ id }) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: BG_COLOR }}>
-      <Audio src={staticFile(`assets/audio/${id}.mp3`)} />
+      <Audio src={staticFile(`assets/audio/${tag}/${id}.mp3`)} />
 
       <div
         style={{

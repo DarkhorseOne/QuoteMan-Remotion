@@ -40,8 +40,18 @@ async function main() {
 
   for (const quote of quotes) {
     const id = quote.id;
-    const rawTimingPath = path.join(ASSETS_DIR, 'timing', `${id}.raw.json`);
-    const audioPath = path.join(ASSETS_DIR, 'audio', `${id}.mp3`);
+    const tag = quote.tag || 'uncategorized';
+
+    // Paths
+    const timingDir = path.join(ASSETS_DIR, 'timing', tag);
+    const layoutDir = path.join(ASSETS_DIR, 'layout', tag);
+    const audioDir = path.join(ASSETS_DIR, 'audio', tag);
+
+    await fs.ensureDir(timingDir);
+    await fs.ensureDir(layoutDir);
+
+    const rawTimingPath = path.join(timingDir, `${id}.raw.json`);
+    const audioPath = path.join(audioDir, `${id}.mp3`);
 
     if (!fs.existsSync(rawTimingPath)) {
       console.warn(`[${id}] Missing raw timing. Skipping.`);
@@ -162,8 +172,8 @@ async function main() {
       layout.scrollEndY = -contentHeight;
     }
 
-    await fs.writeJSON(path.join(ASSETS_DIR, 'timing', `${id}.json`), finalTimings, { spaces: 2 });
-    await fs.writeJSON(path.join(ASSETS_DIR, 'layout', `${id}.json`), layout, { spaces: 2 });
+    await fs.writeJSON(path.join(timingDir, `${id}.json`), finalTimings, { spaces: 2 });
+    await fs.writeJSON(path.join(layoutDir, `${id}.json`), layout, { spaces: 2 });
 
     console.log(`[${id}] Processed. Duration: ${audioDuration.toFixed(2)}s. Mode: ${mode}`);
   }

@@ -38,6 +38,7 @@ import {
   Youtube,
   MessageCircle, // For WeChat
   Instagram, // For XiaoHongShu (closest icon)
+  Copy,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -49,6 +50,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
 
 // Helper for icons
 const PlatformIcon = ({ platform }: { platform: string }) => {
@@ -160,7 +163,16 @@ export function QuoteTable({
                   />
                 </TableCell>
                 <TableCell className="font-mono text-xs text-gray-500">
-                  {quote.id.substring(0, 8)}
+                  <span
+                    className="cursor-pointer hover:bg-gray-100 px-1 rounded transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(quote.id);
+                      toast.success('ID copied to clipboard');
+                    }}
+                    title="Click to copy ID"
+                  >
+                    {quote.id.substring(0, 8)}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
@@ -214,7 +226,12 @@ export function QuoteTable({
         </Table>
       </div>
 
-      <QuoteDetailDialog open={detailOpen} onOpenChange={setDetailOpen} quote={currentQuote} />
+      <QuoteDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        quote={currentQuote}
+        onRefresh={onRefresh}
+      />
       <PublishingDialog
         open={publishingOpen}
         onOpenChange={setPublishingOpen}
@@ -226,14 +243,20 @@ export function QuoteTable({
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    pending: 'outline',
-    audio_ready: 'secondary',
-    rendered: 'default',
-    published: 'default',
+  const variants: Record<string, string> = {
+    pending: 'border-gray-200 text-gray-500 bg-gray-50',
+    audio_ready: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    rendered: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    published: 'bg-blue-100 text-blue-700 border-blue-200',
+    scheduled: 'bg-purple-100 text-purple-700 border-purple-200',
+    posted: 'bg-green-100 text-green-700 border-green-200',
+    failed: 'bg-red-100 text-red-700 border-red-200',
   };
   return (
-    <Badge variant={variants[status] || 'outline'} className="text-[10px] px-1.5 py-0 h-5">
+    <Badge
+      variant="outline"
+      className={cn('text-[10px] px-1.5 py-0 h-5 border font-medium', variants[status])}
+    >
       {status.replace('_', ' ')}
     </Badge>
   );
@@ -387,9 +410,9 @@ function PlatformRow({
       });
       if (!res.ok) throw new Error('Failed');
       onUpdate();
-      alert(`Saved ${platform.label}`);
-    } catch (e) {
-      alert('Error saving');
+      toast.success(`Saved ${platform.label}`);
+    } catch {
+      toast.error('Error saving');
     } finally {
       setLoading(false);
     }
@@ -461,22 +484,89 @@ function QuoteDetailDialog({
   open,
   onOpenChange,
   quote,
+  onRefresh,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quote: any;
+  onRefresh: () => void;
 }) {
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+
   if (!quote) return null;
 
+  const currentStatus = localStatus || quote.status;
+  const isPublished = currentStatus === 'published';
+
+  const handleStatusChange = async (checked: boolean) => {
+    const newStatus = checked ? 'published' : 'rendered';
+    setLocalStatus(newStatus); // Optimistic update
+
+    try {
+      const res = await fetch(`/api/quotes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: quote.id,
+          status: newStatus,
+        }),
+      });
+
+      if (!res.ok) {
+        setLocalStatus(null); // Revert on failure
+        const result = await res.json();
+        throw new Error(result.error || 'Failed to update status');
+      }
+
+      toast.success(`Status updated to ${newStatus}`);
+      onRefresh();
+    } catch (e: any) {
+      setLocalStatus(null); // Revert on failure
+      toast.error(e.message);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) setLocalStatus(null); // Reset local state when closing
+        onOpenChange(open);
+      }}
+    >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Quote Details</DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-1">
-            <Label className="text-xs text-gray-500 uppercase tracking-wider">Quote Text</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-gray-500 uppercase tracking-wider">Quote Text</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="published-mode"
+                    checked={isPublished}
+                    onCheckedChange={handleStatusChange}
+                  />
+                  <Label htmlFor="published-mode" className="text-xs font-normal">
+                    {isPublished ? 'Published' : 'Mark as Published'}
+                  </Label>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => {
+                    navigator.clipboard.writeText(quote.text);
+                    toast.success('Quote text copied to clipboard');
+                  }}
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+            </div>
             <div className="p-3 bg-gray-50 rounded-md text-lg font-medium leading-relaxed">
               {quote.text}
             </div>
@@ -500,7 +590,7 @@ function QuoteDetailDialog({
             <div className="space-y-1">
               <Label className="text-xs text-gray-500 uppercase tracking-wider">Status</Label>
               <div>
-                <StatusBadge status={quote.status} />
+                <StatusBadge status={currentStatus} />
               </div>
             </div>
           </div>
@@ -508,19 +598,23 @@ function QuoteDetailDialog({
           <div className="space-y-1">
             <Label className="text-xs text-gray-500 uppercase tracking-wider">Assets</Label>
             <div className="grid gap-2">
-              <div className="flex items-center gap-2 p-2 border rounded text-sm">
-                <FileAudio className="w-4 h-4 text-indigo-500" />
-                <span className="text-gray-600">Audio:</span>
-                <span className="font-mono text-xs">
-                  {quote.audio_path ? 'Generated' : 'Not generated'}
-                </span>
+              <div className="flex flex-col gap-1 p-2 border rounded text-sm">
+                <div className="flex items-center gap-2">
+                  <FileAudio className="w-4 h-4 text-indigo-500" />
+                  <span className="text-gray-600 font-medium">Audio:</span>
+                </div>
+                <div className="font-mono text-xs break-all pl-6 text-gray-500">
+                  {quote.audio_path || 'Not generated'}
+                </div>
               </div>
-              <div className="flex items-center gap-2 p-2 border rounded text-sm">
-                <VideoIcon className="w-4 h-4 text-emerald-500" />
-                <span className="text-gray-600">Video:</span>
-                <span className="font-mono text-xs">
-                  {quote.video_path ? 'Generated' : 'Not generated'}
-                </span>
+              <div className="flex flex-col gap-1 p-2 border rounded text-sm">
+                <div className="flex items-center gap-2">
+                  <VideoIcon className="w-4 h-4 text-emerald-500" />
+                  <span className="text-gray-600 font-medium">Video:</span>
+                </div>
+                <div className="font-mono text-xs break-all pl-6 text-gray-500">
+                  {quote.video_path || 'Not generated'}
+                </div>
               </div>
             </div>
           </div>

@@ -86,3 +86,25 @@ export async function GET(request: Request) {
     },
   });
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json({ error: 'Missing id or status' }, { status: 400 });
+    }
+
+    const stmt = db.prepare('UPDATE quotes SET status = ? WHERE id = ?');
+    const result = stmt.run(status, id);
+
+    if (result.changes === 0) {
+      return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

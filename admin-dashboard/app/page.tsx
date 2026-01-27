@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Quote } from '@/lib/db';
-import { Loader2, FileAudio, Video, Cloud, Calendar, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { Loader2, FileAudio, Video, Cloud, Calendar, X, Send, RotateCcw } from 'lucide-react';
 import { QuoteTable } from '@/components/QuoteTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,9 +70,9 @@ export default function Dashboard() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       mutate();
-      alert(`Action ${action} completed successfully.\n${result.stdout || ''}`);
+      toast.success(`Action ${action} completed successfully.\n${result.stdout || ''}`);
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     } finally {
       setProcessing(false);
     }
@@ -90,10 +90,10 @@ export default function Dashboard() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       mutate();
-      alert('Scheduled successfully');
+      toast.success('Scheduled successfully');
       setShowSchedule(false);
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     } finally {
       setProcessing(false);
     }
@@ -202,8 +202,49 @@ export default function Dashboard() {
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-700"
             >
-              <Video className="w-3 h-3 mr-2" />
+              {processing ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-2" />
+              ) : (
+                <Video className="w-3 h-3 mr-2" />
+              )}
               Render
+            </Button>
+            <Button
+              onClick={() => runAction('publish')}
+              disabled={
+                selected.length === 0 ||
+                processing ||
+                quotes.filter((q: any) => selected.includes(q.id) && q.status !== 'rendered')
+                  .length > 0
+              }
+              variant="default"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+              title={
+                quotes.filter((q: any) => selected.includes(q.id) && q.status !== 'rendered')
+                  .length > 0
+                  ? 'Only rendered quotes can be published'
+                  : 'Set status to Published'
+              }
+            >
+              <Send className="w-3 h-3 mr-2" />
+              Publish
+            </Button>
+            <Button
+              onClick={() => runAction('unpublish')}
+              disabled={
+                selected.length === 0 ||
+                processing ||
+                quotes.filter((q: any) => selected.includes(q.id) && q.status !== 'published')
+                  .length > 0
+              }
+              variant="outline"
+              size="sm"
+              className="text-gray-600 hover:text-gray-900 border-gray-300"
+              title="Revert Published to Rendered"
+            >
+              <RotateCcw className="w-3 h-3 mr-2" />
+              Unpublish
             </Button>
             <Button
               onClick={() => setShowSchedule(true)}

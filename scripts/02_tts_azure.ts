@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'fs-extra';
 import path from 'path';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+import Database from 'better-sqlite3';
 
 // Types
 type QuoteNormalized = {
@@ -9,6 +10,7 @@ type QuoteNormalized = {
   text: string;
   author?: string;
   voice_gender?: string;
+  tag?: string;
   raw: string;
 };
 
@@ -24,6 +26,7 @@ type RawBoundary = {
 const QUOTES_PATH = path.join(process.cwd(), 'quotes', 'normalized.json');
 const AUDIO_DIR = path.join(process.cwd(), 'public', 'assets', 'audio');
 const TIMING_DIR = path.join(process.cwd(), 'public', 'assets', 'timing');
+const DB_PATH = path.join(process.cwd(), 'admin-dashboard', 'db', 'quotes.db');
 
 // Azure Config
 const SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
@@ -40,6 +43,10 @@ async function main() {
   const quotes: QuoteNormalized[] = await fs.readJSON(QUOTES_PATH);
   console.log(`Processing ${quotes.length} quotes...`);
 
+  // Initialize DB
+  const db = new Database(DB_PATH);
+  const updateAudioPath = db.prepare('UPDATE quotes SET audio_path = ? WHERE id = ?');
+
   const mockMode = !SPEECH_KEY || !SPEECH_REGION;
   if (mockMode) {
     console.warn('⚠️  AZURE_SPEECH_KEY or REGION missing. Running in MOCK MODE.');
@@ -47,11 +54,26 @@ async function main() {
   }
 
   for (const [index, quote] of quotes.entries()) {
-    const audioPath = path.join(AUDIO_DIR, `${quote.id}.mp3`);
-    const timingPath = path.join(TIMING_DIR, `${quote.id}.raw.json`);
+    const tag = quote.tag || 'uncategorized';
+
+    // Create tag subdirectories
+    const audioTagDir = path.join(AUDIO_DIR, tag);
+    const timingTagDir = path.join(TIMING_DIR, tag);
+    await fs.ensureDir(audioTagDir);
+    await fs.ensureDir(timingTagDir);
+
+    const audioPath = path.join(audioTagDir, `${quote.id}.mp3`);
+    const timingPath = path.join(timingTagDir, `${quote.id}.raw.json`);
+
+    // Store relative path in DB (e.g., "public/assets/audio/motivational/q_123.mp3")
+    // Or just relative from public/assets?
+    // The requirement says "update audio_path". The previous code didn't use it much yet.
+    // Let's store relative to project root to be safe and consistent.
+    const relativeAudioPath = path.relative(process.cwd(), audioPath);
 
     if (fs.existsSync(audioPath) && fs.existsSync(timingPath)) {
       console.log(`[${quote.id}] Skipped (Cached)`);
+      updateAudioPath.run(relativeAudioPath, quote.id);
       continue;
     }
 
@@ -69,11 +91,12 @@ async function main() {
     } else {
       await synthesizeAzure(quote, voice, audioPath, timingPath);
     }
+
+    updateAudioPath.run(relativeAudioPath, quote.id);
   }
 
   console.log('✅ TTS generation complete.');
 }
-
 async function synthesizeAzure(
   quote: QuoteNormalized,
   voice: string,
