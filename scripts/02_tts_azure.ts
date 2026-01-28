@@ -201,7 +201,22 @@ function escapeXml(unsafe: string): string {
   });
 }
 
-main().catch((err) => {
-  console.error('Fatal Error:', err);
-  process.exit(1);
-});
+async function runPostProcess() {
+  console.log('🔄 Triggering auto-post-process...');
+  const { exec } = await import('child_process');
+  const util = await import('util');
+  const execAsync = util.promisify(exec);
+  try {
+    const { stdout } = await execAsync('npm run postprocess');
+    console.log(stdout);
+  } catch (e: any) {
+    console.error('Post-process failed:', e.message);
+  }
+}
+
+main()
+  .then(() => runPostProcess())
+  .catch((err) => {
+    console.error('Fatal Error:', err);
+    process.exit(1);
+  });

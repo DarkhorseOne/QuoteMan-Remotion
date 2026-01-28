@@ -21,6 +21,7 @@ Designed to process 4000+ quotes into vertical (9:16) MP4 videos with word-level
 ## Setup
 
 1. **Clone and Install**
+
    ```bash
    git clone <repo-url>
    cd QuoteMan-Remotion
@@ -29,45 +30,69 @@ Designed to process 4000+ quotes into vertical (9:16) MP4 videos with word-level
 
 2. **Environment Configuration**
    Create a `.env` file in the root:
+
    ```bash
    # Required for TTS generation
    AZURE_SPEECH_KEY=your_key_here
    AZURE_SPEECH_REGION=your_region (e.g., uksouth)
+
+   # Required for Translation & Topic Generation
+   OPENAI_API_KEY=sk-...
+   # Optional: Comma-separated list for model rotation (fallback to first if rate limited)
+   OPENAI_MODELS=gpt-3.5-turbo,gpt-4,gpt-4-turbo
+   OPENAI_BASE_URL=https://api.openai.com/v1 # Optional
    ```
 
 ## Workflow
 
-The generation process is split into two phases to ensure stability and minimize API costs.
+The generation process is split into phases to ensure stability and minimize API costs.
 
 ### Phase A: Preprocessing (Data & Audio)
 
 1. **Normalize Data**
    Parses `quotes/quotes.json` into a standardized format.
+
    ```bash
    npm run normalize
    ```
 
 2. **Generate Audio & Timings**
    Calls Azure TTS for each quote, saving MP3s and raw timing data.
+
    ```bash
    npm run tts
    ```
 
 3. **Post-Process**
    Calculates layout decisions (scroll vs static) and final word timings.
+
    ```bash
    npm run postprocess
+   ```
+
+4. **Batch Translation & Topics**
+   Translates content to Chinese and generates hashtags using OpenAI.
+   Supports parallel processing and auto-rotation of models on rate limits.
+
+   ```bash
+   # Default (2 workers)
+   npx tsx scripts/06_batch_process.ts
+
+   # Custom concurrency
+   npx tsx scripts/06_batch_process.ts --workers=5
    ```
 
 ### Phase B: Rendering
 
 1. **Development Preview**
    Open Remotion Studio to view and debug compositions.
+
    ```bash
    npm run dev
    ```
 
 2. **Render Single Video**
+
    ```bash
    npm run render -- QuoteVideo --props='{"id":"q_000001"}'
    ```

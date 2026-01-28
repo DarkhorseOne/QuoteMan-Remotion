@@ -211,6 +211,16 @@ export default function Dashboard() {
 
           <div className="ml-auto flex gap-2">
             <Button
+              onClick={() => setSelected([])}
+              disabled={selected.length === 0}
+              variant="ghost"
+              size="sm"
+              className="text-gray-500 hover:text-gray-900 border border-transparent hover:border-gray-200"
+            >
+              <X className="w-3 h-3 mr-2" />
+              Unselect All ({selected.length})
+            </Button>
+            <Button
               onClick={() => runAction('tts')}
               disabled={selected.length === 0 || processing}
               variant="default"

@@ -11,6 +11,16 @@ const NORMALIZED_PATH = path.join(process.cwd(), '..', 'quotes', 'normalized.jso
 
 export async function POST() {
   try {
+    const ASSETS_DIR = path.join(ROOT_DIR, 'public', 'assets');
+    const timingDir = path.join(ASSETS_DIR, 'timing');
+
+    const needsPostProcess = !fs.existsSync(timingDir) || fs.readdirSync(timingDir).length === 0;
+
+    if (needsPostProcess) {
+      console.log('Triggering pre-render postprocess...');
+      await execAsync('npm run postprocess', { cwd: ROOT_DIR });
+    }
+
     const { stdout, stderr } = await execAsync('npm run batch-render', { cwd: ROOT_DIR });
     if (stderr) console.error(stderr);
 

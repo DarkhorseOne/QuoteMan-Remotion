@@ -58,13 +58,18 @@ async function main() {
       continue;
     }
 
+    if (!fs.existsSync(audioPath)) {
+      console.warn(`[${id}] Missing audio file at ${audioPath}. Skipping.`);
+      continue;
+    }
+
     const rawTimings: RawBoundary[] = await fs.readJSON(rawTimingPath);
 
     let audioDuration = 0;
     try {
       audioDuration = await getAudioDurationInSeconds(audioPath);
-    } catch {
-      console.warn(`[${id}] Could not get audio duration (Mock mode?). Using fallback.`);
+    } catch (err) {
+      console.warn(`[${id}] Could not get audio duration: ${err}. Using fallback.`);
       const last = rawTimings[rawTimings.length - 1];
       const endTicks = last.audioOffsetTicks + (last.durationTicks || 5000000);
       audioDuration = endTicks / 10000000 + 0.5;
