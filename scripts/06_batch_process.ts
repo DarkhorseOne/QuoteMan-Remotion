@@ -1,8 +1,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
+
+import { generateTopics, getCurrentOpenAiModel, rotateOpenAiModel, translate } from './ai-service';
 
 // Load env from root
 dotenv.config({ path: path.join(process.cwd(), '.env') });
@@ -10,111 +11,21 @@ dotenv.config({ path: path.join(process.cwd(), '.env') });
 const dbPath = path.join(process.cwd(), 'admin-dashboard/db/quotes.db');
 const db = new Database(dbPath);
 
-// Model rotation logic
-const models = (process.env.OPENAI_MODELS || process.env.OPENAI_MODEL || 'gpt-3.5-turbo').split(
-  ',',
-);
-let currentModelIndex = 0;
-
-function getCurrentModel() {
-  return models[currentModelIndex % models.length].trim();
-}
-
-function rotateModel() {
-  currentModelIndex++;
-  const newModel = getCurrentModel();
-  console.log(`  ! Rotating model to: ${newModel}`);
-  return newModel;
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const aiProvider = (process.env.AI_PROVIDER || 'openai').toLowerCase();
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Reuse logic from API routes
-async function translate(text: string): Promise<string | null> {
-  const model = getCurrentModel();
-  try {
-    const completion = await openai.chat.completions.create({
-      model: model,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a professional translator. Translate the following English quote to Chinese. Only return the translated text, no other words.',
-        },
-        {
-          role: 'user',
-          content: text,
-        },
-      ],
-    });
-    return completion.choices[0].message.content?.trim() || null;
-  } catch (error) {
-    console.error('Translation error:', error);
-    throw error;
-  }
-}
-
-async function generateTopics(
-  text: string,
-  tag: string,
-): Promise<{ en: string; zh: string } | null> {
-  const model = getCurrentModel();
-  const prompt = `
-    Analyze the following quote and generate 5 relevant hashtags in English and 5 in Chinese.
-    The hashtags should be relevant to the quote's content, mood, and potential audience.
-    Return strictly valid JSON with no other text:
-    {
-      "en": ["#topic1", "#topic2", ...],
-      "zh": ["#话题1", "#话题2", ...]
-    }
-
-    Quote: "${text}"
-    Tag: "${tag || ''}"
-  `;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a social media expert. Generate relevant hashtags.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = completion.choices[0].message.content;
-    if (content) {
-      const parsed = JSON.parse(content);
-      return {
-        en: parsed.en.join(' '),
-        zh: parsed.zh.join(' '),
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Topic generation error:', error);
-    throw error;
-  }
-}
+// translate() and generateTopics() provided by ./ai-service
 
 async function main() {
   const args = process.argv.slice(2);
   const workersArg = args.find((arg) => arg.startsWith('--workers='));
   const workers = workersArg ? parseInt(workersArg.split('=')[1], 10) : 2;
+  const dryRun = args.includes('--dry-run');
 
+  console.log(`AI provider: ${aiProvider}`);
   console.log(`Using ${workers} concurrent workers.`);
 
   const limit = pLimit(workers);
@@ -131,6 +42,11 @@ async function main() {
 
   const quotes = db.prepare(query).all() as any[];
   console.log(`Found ${quotes.length} quotes requiring processing.`);
+
+  if (dryRun) {
+    console.log('Dry run enabled. Exiting without calling AI or writing DB updates.');
+    return;
+  }
 
   const updateTransStmt = db.prepare('UPDATE quotes SET text_zh = ? WHERE id = ?');
   const updateTopicsStmt = db.prepare(
@@ -157,11 +73,11 @@ async function main() {
             const isTokenPoolEmpty =
               e.status === 503 && e.message && e.message.includes('Token pool is empty');
 
-            if (isRateLimit || isTokenPoolEmpty) {
+            if ((isRateLimit || isTokenPoolEmpty) && aiProvider === 'openai') {
               console.warn(
-                `  ! ${isRateLimit ? 'Rate limit' : 'Token pool empty'} hit on ${getCurrentModel()}. Rotating...`,
+                `  ! ${isRateLimit ? 'Rate limit' : 'Token pool empty'} hit on ${getCurrentOpenAiModel()}. Rotating...`,
               );
-              rotateModel();
+              rotateOpenAiModel();
               // Retry immediately with new model (or short delay)
               await sleep(1000);
               continue; // Skip the normal retry decrement logic effectively giving fresh retries for new model?

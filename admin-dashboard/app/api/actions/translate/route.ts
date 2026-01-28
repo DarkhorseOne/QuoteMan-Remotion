@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, Quote } from '@/lib/db';
-import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+import { translate } from '@/lib/ai-service';
 
 export async function POST(request: Request) {
   try {
@@ -33,22 +29,7 @@ export async function POST(request: Request) {
         // Skip logic could be added here if needed
       }
 
-      const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a professional translator. Translate the following English quote to Chinese. Only return the translated text, no other words.',
-          },
-          {
-            role: 'user',
-            content: quote.text,
-          },
-        ],
-      });
-
-      const translatedText = completion.choices[0].message.content?.trim();
+      const translatedText = await translate(quote.text);
 
       if (translatedText) {
         updateStmt.run(translatedText, quote.id);

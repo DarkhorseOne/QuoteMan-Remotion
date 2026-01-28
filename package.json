@@ -20,13 +20,15 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@google/generative-ai": "^0.24.1",
     "@remotion/bundler": "^4.0.409",
     "@remotion/cli": "^4.0.0",
     "@remotion/google-fonts": "^4.0.410",

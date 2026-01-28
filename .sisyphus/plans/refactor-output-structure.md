@@ -49,10 +49,10 @@ Ensure all generated assets are organized by tag and verifiable via database rec
 
 ### Definition of Done
 
-- [ ] `npm run tts` (mock) creates folders `public/assets/audio/[tag]/`.
-- [ ] SQLite `quotes` table shows correct `audio_path`.
-- [ ] `npm run render` outputs to `out/[tag]/` and updates `video_path`.
-- [ ] Video renders correctly with assets loaded.
+- [x] `npm run tts` (mock) creates folders `public/assets/audio/[tag]/`.
+- [x] SQLite `quotes` table shows correct `audio_path`.
+- [x] `npm run render` outputs to `out/[tag]/` and updates `video_path`.
+- [x] Video renders correctly with assets loaded.
 
 ---
 
@@ -71,7 +71,7 @@ Ensure all generated assets are organized by tag and verifiable via database rec
 
 ## TODOs
 
-- [ ] 1. Refactor Remotion Component (`QuoteVideo`)
+- [x] 1. Refactor Remotion Component (`QuoteVideo`)
 
   **What to do**:
   - Update `QuoteVideoProps` in `remotion/compositions/QuoteVideo.tsx` to include `tag: string`.
@@ -86,7 +86,7 @@ Ensure all generated assets are organized by tag and verifiable via database rec
   - [ ] Component compiles without type errors.
   - [ ] Metadata calculation uses correct path.
 
-- [ ] 2. Update TTS Script (`02_tts_azure.ts`)
+- [x] 2. Update TTS Script (`02_tts_azure.ts`)
 
   **What to do**:
   - Import `better-sqlite3` and `Database`.
@@ -111,7 +111,7 @@ Ensure all generated assets are organized by tag and verifiable via database rec
   - [ ] Verify `public/assets/audio/attitude/` exists (example tag).
   - [ ] Verify DB `audio_path` column is populated.
 
-- [ ] 3. Update Postprocess Script (`03_postprocess.ts`)
+- [x] 3. Update Postprocess Script (`03_postprocess.ts`)
 
   **What to do**:
   - Update paths to read from `[tag]` subdirectories.
@@ -126,7 +126,7 @@ Ensure all generated assets are organized by tag and verifiable via database rec
   - [ ] Run `npm run postprocess`.
   - [ ] Verify `public/assets/layout/[tag]/` files exist.
 
-- [ ] 4. Update Render Script (`04_render.ts`)
+- [x] 4. Update Render Script (`04_render.ts`)
 
   **What to do**:
   - Update input props to pass `{ id, tag }`.
