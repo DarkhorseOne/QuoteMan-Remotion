@@ -20,7 +20,8 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "ai_batch" : "tsx scripts/06_batch_process.ts --workers=3"
   },
   "keywords": [],
   "author": "",
