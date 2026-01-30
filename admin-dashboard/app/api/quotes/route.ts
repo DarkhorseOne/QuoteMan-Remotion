@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '50');
   const tag = searchParams.get('tag');
@@ -20,6 +21,11 @@ export async function GET(request: Request) {
   if (tag) {
     whereClause += ' AND tag = ?';
     params.push(tag);
+  }
+
+  if (id) {
+    whereClause += ' AND id = ?';
+    params.push(id);
   }
 
   if (search) {

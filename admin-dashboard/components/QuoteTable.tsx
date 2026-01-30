@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import useSWR from 'swr';
 import {
   Table,
   TableBody,
@@ -42,6 +43,10 @@ import {
   Languages,
   Hash,
   Download,
+  Wand2,
+  FileCog,
+  Play,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -55,6 +60,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Helper for icons
 const PlatformIcon = ({ platform }: { platform: string }) => {
@@ -511,10 +518,24 @@ function QuoteDetailDialog({
   onRefresh: () => void;
 }) {
   const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Use SWR to fetch the latest data for the specific quote
+  // We use the quote.id from the prop as the key
+  const { data, mutate } = useSWR(
+    open && quote?.id ? `/api/quotes?id=${quote.id}&limit=1` : null,
+    fetcher,
+    {
+      refreshInterval: 0, // Don't auto-refresh unless mutated
+      revalidateOnFocus: false,
+    },
+  );
 
   if (!quote) return null;
 
-  const currentStatus = localStatus || quote.status;
+  // Prefer the fetched data if available, otherwise fallback to prop
+  const displayQuote = data?.data?.[0] || quote;
+  const currentStatus = localStatus || displayQuote.status;
   const isPublished = currentStatus === 'published';
 
   const handleStatusChange = async (checked: boolean) => {
@@ -538,10 +559,41 @@ function QuoteDetailDialog({
       }
 
       toast.success(`Status updated to ${newStatus}`);
-      onRefresh();
+      mutate(); // Refresh local SWR data
+      onRefresh(); // Refresh parent table
     } catch (e: any) {
       setLocalStatus(null); // Revert on failure
       toast.error(e.message);
+    }
+  };
+
+  const handleAction = async (action: 'tts' | 'postprocess' | 'render') => {
+    setActionLoading(action);
+    const toastId = toast.loading(`Running ${action}...`);
+
+    try {
+      const res = await fetch(`/api/actions/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteIds: [quote.id] }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || error.error || 'Action failed');
+      }
+
+      toast.success(`${action} completed successfully`, { id: toastId });
+
+      // Trigger side effects:
+      // 1. Refresh the dialog's data (to show new assets)
+      // 2. Refresh the parent table (to update status)
+      mutate();
+      onRefresh();
+    } catch (e: any) {
+      toast.error(`Error: ${e.message}`, { id: toastId });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -553,11 +605,12 @@ function QuoteDetailDialog({
         onOpenChange(open);
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Quote Details</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-6 py-4">
+
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2 grid gap-6 py-4">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <Label className="text-xs text-gray-500 uppercase tracking-wider">Quote Text</Label>
@@ -577,7 +630,7 @@ function QuoteDetailDialog({
                   size="sm"
                   className="h-6 px-2 text-xs"
                   onClick={() => {
-                    navigator.clipboard.writeText(quote.text);
+                    navigator.clipboard.writeText(displayQuote.text);
                     toast.success('Quote text copied to clipboard');
                   }}
                 >
@@ -587,10 +640,10 @@ function QuoteDetailDialog({
               </div>
             </div>
             <div className="p-3 bg-gray-50 rounded-md text-lg font-medium leading-relaxed">
-              {quote.text}
+              {displayQuote.text}
             </div>
 
-            {quote.text_zh && (
+            {displayQuote.text_zh && (
               <div className="mt-4 space-y-1">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs text-gray-500 uppercase tracking-wider">
@@ -602,7 +655,7 @@ function QuoteDetailDialog({
                       size="sm"
                       className="h-6 px-2 text-xs"
                       onClick={() => {
-                        const fullText = `${quote.text}\n${quote.text_zh}\n${quote.topics_zh || ''}`;
+                        const fullText = `${displayQuote.text}\n${displayQuote.text_zh}\n${displayQuote.topics_zh || ''}`;
                         navigator.clipboard.writeText(fullText.trim());
                         toast.success('English + Chinese + Topics copied');
                       }}
@@ -615,7 +668,7 @@ function QuoteDetailDialog({
                       size="sm"
                       className="h-6 px-2 text-xs"
                       onClick={() => {
-                        navigator.clipboard.writeText(quote.text_zh);
+                        navigator.clipboard.writeText(displayQuote.text_zh);
                         toast.success('Chinese text copied to clipboard');
                       }}
                     >
@@ -625,14 +678,14 @@ function QuoteDetailDialog({
                   </div>
                 </div>
                 <div className="p-3 bg-orange-50/50 border border-orange-100 rounded-md text-lg font-medium leading-relaxed text-gray-800">
-                  {quote.text_zh}
+                  {displayQuote.text_zh}
                 </div>
               </div>
             )}
 
-            {(quote.topics_en || quote.topics_zh) && (
+            {(displayQuote.topics_en || displayQuote.topics_zh) && (
               <div className="mt-4 grid grid-cols-2 gap-4">
-                {quote.topics_en && (
+                {displayQuote.topics_en && (
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs text-gray-500 uppercase tracking-wider">
@@ -643,7 +696,7 @@ function QuoteDetailDialog({
                         size="sm"
                         className="h-6 px-2 text-xs"
                         onClick={() => {
-                          const fullText = `${quote.text}\n${quote.topics_en}`;
+                          const fullText = `${displayQuote.text}\n${displayQuote.topics_en}`;
                           navigator.clipboard.writeText(fullText);
                           toast.success('English quote + topics copied');
                         }}
@@ -656,7 +709,7 @@ function QuoteDetailDialog({
                         size="sm"
                         className="h-6 px-2 text-xs"
                         onClick={() => {
-                          navigator.clipboard.writeText(quote.topics_en);
+                          navigator.clipboard.writeText(displayQuote.topics_en);
                           toast.success('English topics copied');
                         }}
                       >
@@ -665,11 +718,11 @@ function QuoteDetailDialog({
                       </Button>
                     </div>
                     <div className="p-2 bg-pink-50/50 border border-pink-100 rounded text-sm text-pink-700 font-mono break-words">
-                      {quote.topics_en}
+                      {displayQuote.topics_en}
                     </div>
                   </div>
                 )}
-                {quote.topics_zh && (
+                {displayQuote.topics_zh && (
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs text-gray-500 uppercase tracking-wider">
@@ -680,7 +733,7 @@ function QuoteDetailDialog({
                         size="sm"
                         className="h-6 px-2 text-xs"
                         onClick={() => {
-                          navigator.clipboard.writeText(quote.topics_zh);
+                          navigator.clipboard.writeText(displayQuote.topics_zh);
                           toast.success('Chinese topics copied');
                         }}
                       >
@@ -689,7 +742,7 @@ function QuoteDetailDialog({
                       </Button>
                     </div>
                     <div className="p-2 bg-pink-50/50 border border-pink-100 rounded text-sm text-pink-700 font-mono break-words">
-                      {quote.topics_zh}
+                      {displayQuote.topics_zh}
                     </div>
                   </div>
                 )}
@@ -700,17 +753,17 @@ function QuoteDetailDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-gray-500 uppercase tracking-wider">Author</Label>
-              <div className="font-medium">{quote.author || '-'}</div>
+              <div className="font-medium">{displayQuote.author || '-'}</div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-gray-500 uppercase tracking-wider">Tag</Label>
               <div>
-                <Badge variant="outline">{quote.tag}</Badge>
+                <Badge variant="outline">{displayQuote.tag}</Badge>
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-gray-500 uppercase tracking-wider">Voice Gender</Label>
-              <div className="font-medium capitalize">{quote.voice_gender || '-'}</div>
+              <div className="font-medium capitalize">{displayQuote.voice_gender || '-'}</div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-gray-500 uppercase tracking-wider">Status</Label>
@@ -730,7 +783,7 @@ function QuoteDetailDialog({
                     <FileAudio className="w-4 h-4 text-indigo-500" />
                     <span className="text-gray-600 font-medium">Audio</span>
                   </div>
-                  {quote.audio_path && (
+                  {displayQuote.audio_path && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -738,8 +791,8 @@ function QuoteDetailDialog({
                       asChild
                     >
                       <a
-                        href={`/api/media?path=${encodeURIComponent(quote.audio_path)}`}
-                        download={quote.audio_path.split(/[/\\]/).pop()}
+                        href={`/api/media?path=${encodeURIComponent(displayQuote.audio_path)}`}
+                        download={displayQuote.audio_path.split(/[/\\]/).pop()}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -750,15 +803,15 @@ function QuoteDetailDialog({
                   )}
                 </div>
 
-                {quote.audio_path ? (
+                {displayQuote.audio_path ? (
                   <div className="w-full">
                     <audio
                       controls
                       className="w-full h-8 mt-1"
-                      src={`/api/media?path=${encodeURIComponent(quote.audio_path)}`}
+                      src={`/api/media?path=${encodeURIComponent(displayQuote.audio_path)}`}
                     />
                     <div className="mt-1 font-mono text-[10px] text-gray-400 truncate pl-1">
-                      {quote.audio_path}
+                      {displayQuote.audio_path}
                     </div>
                   </div>
                 ) : (
@@ -773,7 +826,7 @@ function QuoteDetailDialog({
                     <VideoIcon className="w-4 h-4 text-emerald-500" />
                     <span className="text-gray-600 font-medium">Video</span>
                   </div>
-                  {quote.video_path && (
+                  {displayQuote.video_path && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -781,8 +834,8 @@ function QuoteDetailDialog({
                       asChild
                     >
                       <a
-                        href={`/api/media?path=${encodeURIComponent(quote.video_path)}`}
-                        download={quote.video_path.split(/[/\\]/).pop()}
+                        href={`/api/media?path=${encodeURIComponent(displayQuote.video_path)}`}
+                        download={displayQuote.video_path.split(/[/\\]/).pop()}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -793,15 +846,15 @@ function QuoteDetailDialog({
                   )}
                 </div>
 
-                {quote.video_path ? (
+                {displayQuote.video_path ? (
                   <div className="w-full">
                     <video
                       controls
                       className="w-full max-h-[400px] bg-black rounded mt-1 shadow-sm"
-                      src={`/api/media?path=${encodeURIComponent(quote.video_path)}`}
+                      src={`/api/media?path=${encodeURIComponent(displayQuote.video_path)}`}
                     />
                     <div className="mt-1 font-mono text-[10px] text-gray-400 truncate pl-1">
-                      {quote.video_path}
+                      {displayQuote.video_path}
                     </div>
                   </div>
                 ) : (
@@ -815,9 +868,9 @@ function QuoteDetailDialog({
             <Label className="text-xs text-gray-500 uppercase tracking-wider">
               Publishing Info
             </Label>
-            {quote.publishing && quote.publishing.length > 0 ? (
+            {displayQuote.publishing && displayQuote.publishing.length > 0 ? (
               <div className="grid gap-2">
-                {quote.publishing.map((pub: any) => (
+                {displayQuote.publishing.map((pub: any) => (
                   <div
                     key={pub.id}
                     className="flex items-center justify-between p-2 border rounded bg-gray-50 text-sm"
@@ -851,6 +904,55 @@ function QuoteDetailDialog({
             )}
           </div>
         </div>
+
+        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4 mt-auto">
+          <div className="flex w-full justify-between items-center">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAction('tts')}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === 'tts' ? (
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="w-3 h-3 mr-2 text-indigo-500" />
+                )}
+                TTS
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAction('postprocess')}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === 'postprocess' ? (
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                ) : (
+                  <FileCog className="w-3 h-3 mr-2 text-orange-500" />
+                )}
+                Post-Process
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAction('render')}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === 'render' ? (
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                ) : (
+                  <Play className="w-3 h-3 mr-2 text-emerald-500" />
+                )}
+                Render
+              </Button>
+            </div>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
