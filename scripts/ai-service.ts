@@ -1,6 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 export type AiProvider = 'openai' | 'anthropic' | 'gemini';
 
@@ -57,6 +60,9 @@ export const rotateOpenAiModel = (): string => {
   return newModel;
 };
 
+console.log('process.env.OPENAI_API_KEY', process.env.OPENAI_API_KEY);
+console.log('process.env.OPENAI_BASE_URL', process.env.OPENAI_BASE_URL);
+console.log('process.env.OPENAI_MODEL', process.env.OPENAI_MODEL, getCurrentOpenAiModel());
 const openai = new OpenAI({
   // OpenAI SDK enforces apiKey presence even if you proxy locally.
   apiKey: process.env.OPENAI_API_KEY || 'dummy',

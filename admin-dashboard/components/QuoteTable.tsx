@@ -41,6 +41,7 @@ import {
   Copy,
   Languages,
   Hash,
+  Download,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -722,23 +723,90 @@ function QuoteDetailDialog({
           <div className="space-y-1">
             <Label className="text-xs text-gray-500 uppercase tracking-wider">Assets</Label>
             <div className="grid gap-2">
-              <div className="flex flex-col gap-1 p-2 border rounded text-sm">
-                <div className="flex items-center gap-2">
-                  <FileAudio className="w-4 h-4 text-indigo-500" />
-                  <span className="text-gray-600 font-medium">Audio:</span>
+              {/* Audio Section */}
+              <div className="flex flex-col gap-2 p-3 border rounded-md text-sm bg-gray-50/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileAudio className="w-4 h-4 text-indigo-500" />
+                    <span className="text-gray-600 font-medium">Audio</span>
+                  </div>
+                  {quote.audio_path && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                      asChild
+                    >
+                      <a
+                        href={`/api/media?path=${encodeURIComponent(quote.audio_path)}`}
+                        download={quote.audio_path.split(/[/\\]/).pop()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </a>
+                    </Button>
+                  )}
                 </div>
-                <div className="font-mono text-xs break-all pl-6 text-gray-500">
-                  {quote.audio_path || 'Not generated'}
-                </div>
+
+                {quote.audio_path ? (
+                  <div className="w-full">
+                    <audio
+                      controls
+                      className="w-full h-8 mt-1"
+                      src={`/api/media?path=${encodeURIComponent(quote.audio_path)}`}
+                    />
+                    <div className="mt-1 font-mono text-[10px] text-gray-400 truncate pl-1">
+                      {quote.audio_path}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 italic pl-6">Not generated</div>
+                )}
               </div>
-              <div className="flex flex-col gap-1 p-2 border rounded text-sm">
-                <div className="flex items-center gap-2">
-                  <VideoIcon className="w-4 h-4 text-emerald-500" />
-                  <span className="text-gray-600 font-medium">Video:</span>
+
+              {/* Video Section */}
+              <div className="flex flex-col gap-2 p-3 border rounded-md text-sm bg-gray-50/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <VideoIcon className="w-4 h-4 text-emerald-500" />
+                    <span className="text-gray-600 font-medium">Video</span>
+                  </div>
+                  {quote.video_path && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      asChild
+                    >
+                      <a
+                        href={`/api/media?path=${encodeURIComponent(quote.video_path)}`}
+                        download={quote.video_path.split(/[/\\]/).pop()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </a>
+                    </Button>
+                  )}
                 </div>
-                <div className="font-mono text-xs break-all pl-6 text-gray-500">
-                  {quote.video_path || 'Not generated'}
-                </div>
+
+                {quote.video_path ? (
+                  <div className="w-full">
+                    <video
+                      controls
+                      className="w-full max-h-[400px] bg-black rounded mt-1 shadow-sm"
+                      src={`/api/media?path=${encodeURIComponent(quote.video_path)}`}
+                    />
+                    <div className="mt-1 font-mono text-[10px] text-gray-400 truncate pl-1">
+                      {quote.video_path}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 italic pl-6">Not generated</div>
+                )}
               </div>
             </div>
           </div>
